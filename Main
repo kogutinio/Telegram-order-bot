@@ -48,7 +48,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
         await query.edit_message_text("❗ Этот заказ уже был принят.")
 
-app = ApplicationBuilder().token(7755622558:AAFFTeDAjMYiVhaSMmktXANvOJADu1OarP0).build()
+import os
+TOKEN = os.environ.get("BOT_TOKEN")
+app = ApplicationBuilder().token(TOKEN).build()
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("dodaj", dodaj))
 app.add_handler(CallbackQueryHandler(button_handler))
