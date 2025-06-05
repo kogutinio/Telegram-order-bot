@@ -1,0 +1,55 @@
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+import datetime
+
+orders = []
+order_id_counter = 1
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 Привет! Используй /dodaj <текст заказа>, чтобы добавить заказ.")
+
+async def dodaj(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global order_id_counter
+    text = ' '.join(context.args)
+    if not text:
+        await update.message.reply_text("❗ Укажи описание заказа. Пример: /dodaj Доставка с ул. А до Б")
+        return
+
+    order_id = order_id_counter
+    order_id_counter += 1
+
+    orders.append({
+        "id": order_id,
+        "text": text,
+        "status": "open",
+        "taken_by": None,
+        "timestamp": datetime.datetime.now()
+    })
+
+    keyboard = [[InlineKeyboardButton("✅ Принять", callback_data=f"accept_{order_id}")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text(f"🆕 Новый заказ #{order_id}:\n{text}", reply_markup=reply_markup)
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    user = query.from_user.first_name
+    data = query.data
+
+    if data.startswith("accept_"):
+        order_id = int(data.split("_")[1])
+        for order in orders:
+            if order["id"] == order_id and order["status"] == "open":
+                order["status"] = "taken"
+                order["taken_by"] = user
+                await query.edit_message_text(
+                    text=f"🟩 Заказ #{order_id} принят:\n{order['text']}\n👤 Принял: {user}"
+                )
+                return
+        await query.edit_message_text("❗ Этот заказ уже был принят.")
+
+app = ApplicationBuilder().token(7755622558:AAFFTeDAjMYiVhaSMmktXANvOJADu1OarP0).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("dodaj", dodaj))
+app.add_handler(CallbackQueryHandler(button_handler))
+app.run_polling()
